@@ -125,21 +125,42 @@ def resolve_image_path(p: str) -> Path | None:
     return None
 
 # ================= PREDICT FUNCTION =================
-IMG_SIZE = (256, 256)  # fallback
-
 def preprocess_image(image: Image.Image):
-    img = image.resize(IMG_SIZE)
-    img_array = np.array(img)/255.0
-    if img_array.ndim == 2:
-        img_array = np.stack([img_array]*3, axis=-1)
-    if img_array.shape[-1] == 4:
-        img_array = img_array[..., :3]
-    return np.expand_dims(img_array, axis=0)
+    if model is None:
+        return None
+    input_shape = model.input_shape  # contoh: (None, 256, 256, 3) atau (None, 128)
+    
+    # hapus batch dim
+    if isinstance(input_shape, list):
+        input_shape = input_shape[0]
+    input_shape = tuple(dim for dim in input_shape if dim is not None)
+
+    img = np.array(image.convert("RGB")) / 255.0
+
+    # Kalau model butuh gambar (CNN)
+    if len(input_shape) == 3:  # (H, W, C)
+        h, w, c = input_shape
+        img = Image.fromarray((img*255).astype(np.uint8)).resize((w, h))
+        arr = np.array(img, dtype=np.float32) / 255.0
+        return np.expand_dims(arr, axis=0)
+
+    # Kalau model butuh vektor (MLP)
+    elif len(input_shape) == 1:  # (features,)
+        size = input_shape[0]
+        img = Image.fromarray((img*255).astype(np.uint8)).resize((size, size))
+        arr = np.array(img, dtype=np.float32) / 255.0
+        flat = arr.flatten()[:size]  # ambil panjang sesuai input
+        return np.expand_dims(flat, axis=0)
+
+    else:
+        raise ValueError(f"Unsupported input shape: {input_shape}")
 
 def predict_image(img: Image.Image):
     if model is None:
         return None, None
     x = preprocess_image(img)
+    if x is None:
+        return None, None
     preds = np.squeeze(model.predict(x, verbose=0))
     if preds.ndim == 0:
         preds = np.array([preds])
