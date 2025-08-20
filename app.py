@@ -30,16 +30,21 @@ def load_model():
 
 model = load_model()
 
-# ===================== LOAD LABELS =========================
+# ====================== LOAD LABELS =========================
 def load_labels():
     if LABEL_PATH.exists():
         with open(LABEL_PATH, "r") as f:
             data = json.load(f)
-        return data.get("classes", [])
+        # Bisa berupa dict {"classes": [...]} atau langsung list
+        if isinstance(data, dict):
+            return data.get("classes", [])
+        elif isinstance(data, list):
+            return data
+        else:
+            st.warning("Format label tidak dikenali. Pastikan JSON berupa list atau dict dengan key 'classes'.")
+            return []
     return []
-
-class_labels = load_labels()
-
+    
 # ================= LABEL CLEANER ===========================
 def clean_label(lbl: str) -> str:
     lbl = lbl.replace("Tomato", "").replace("___", " ").strip()
@@ -127,7 +132,13 @@ def predict_image(img: Image.Image):
         return None, None
     x = preprocess_image(img)
     preds = model.predict(x, verbose=0)[0]
-    return preds, class_labels[np.argmax(preds)] if class_labels else str(np.argmax(preds))
+
+    if class_labels and len(preds) == len(class_labels):
+        label = class_labels[np.argmax(preds)]
+    else:
+        label = str(np.argmax(preds))
+
+    return preds, label
 
 # ======================= NAVBAR ============================
 with st.container():
