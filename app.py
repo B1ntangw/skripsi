@@ -16,14 +16,16 @@ st.set_page_config(
 )
 
 # ================= PATH MODEL =================
-MODEL_DIR = Path("models")
-MODEL_DIR.mkdir(exist_ok=True)
-MODEL_H5 = MODEL_DIR / "models/model_tomat.keras"
-MODEL_SM = MODEL_DIR / "model_tomat_savedmodel"
-LABEL_PATH = MODEL_DIR / "class_labels.json"
+MODEL_FOLDER = Path("models")
+MODEL_FOLDER.mkdir(parents=True, exist_ok=True)  # pastikan folder ada
+MODEL_H5 = MODEL_FOLDER / "model_tomat.h5"
+MODEL_SM = MODEL_FOLDER / "model_tomat.keras"
+LABEL_PATH = MODEL_FOLDER / "class_labels.json"
 
 # ================= DOWNLOAD MODEL DARI DRIVE =================
-DRIVE_LINK = "https://drive.google.com/file/d/1lYga4myscy7wDcaKwlS3IiaQDKUBqkRl/view?usp=drive_link"
+# Ganti link Drive ke format direct download
+DRIVE_LINK = "https://drive.google.com/uc?id=1-EHYnQ_jJQY64toVEDHlMFDAsknE5SWr"
+
 if not MODEL_H5.exists() and not MODEL_SM.exists():
     with st.spinner("Mengunduh model dari Google Drive..."):
         gdown.download(DRIVE_LINK, str(MODEL_H5), quiet=False)
@@ -35,7 +37,7 @@ def load_model():
         if MODEL_SM.exists():
             return tf.keras.models.load_model(MODEL_SM)
         elif MODEL_H5.exists():
-            model = tf.keras.models.load_model(MODEL_H5)
+            model = tf.keras.models.load_model(MODEL_H5, compile=False)
             model.save(MODEL_SM)  # simpan ke SavedModel untuk menghindari dtype error
             return model
         else:
