@@ -10,7 +10,7 @@ import gdown  # pip install gdown
 
 # ================= CONFIG =================
 st.set_page_config(
-    page_title="🍅 Tomato Leaf Disease Classifier",
+    page_title="Tomato Leaf Disease Classifier",
     page_icon="🍅",
     layout="wide"
 )
@@ -189,74 +189,44 @@ with st.container():
 
 st.markdown("""<style>.nav-link::before { display: none !important; }</style>""", unsafe_allow_html=True)
 
-# ====================== MAIN PAGE ==========================
+# ================= MAIN PAGE =================
 if selected == "Beranda":
-    st.title(" Tomato Leaf Disease Classifier")
+    st.title("🍅 Tomato Leaf Disease Classifier")
     st.markdown(
         """
         <div style="padding:20px; background-color:#2c2c2c; border-radius:10px; margin-bottom:20px; color:#f1f1f1;">
         <h3>Selamat Datang Di Website</h3>
-        <p>Aplikasi ini menggunakan model <b>Convolutional Neural Network (CNN)</b> 
-        untuk mendeteksi penyakit pada daun tomat secara otomatis</p>
-        <p> Pada halaman ini terdapat 9 jenis penyakit tanaman tomat beserta deskripsi penyakitnya</p>
+        <p>Aplikasi ini menggunakan model <b>CNN</b> untuk mendeteksi penyakit pada daun tomat.</p>
         </div>
-        """,
-        unsafe_allow_html=True,
+        """, unsafe_allow_html=True
     )
 
     if class_labels:
-        st.subheader(" Daftar Kelas")
-        st.markdown("<br>", unsafe_allow_html=True)
-
+        st.subheader("Daftar Kelas")
         cols = st.columns(3)
-        for idx, raw_lbl in enumerate(class_labels):
-            clean_lbl = clean_label(raw_lbl)
-            mapped = CLASS_IMAGES.get(clean_lbl)
-            img_path = resolve_image_path(mapped) if mapped else None
+        for idx, lbl in enumerate(class_labels):
+            clean_lbl = clean_label(lbl)
+            img_path = resolve_image_path(CLASS_IMAGES.get(clean_lbl, ""))
             desc = CLASS_DESCRIPTIONS.get(clean_lbl, "Deskripsi belum tersedia.")
-
             with cols[idx % 3]:
-                # Judul center
-                st.markdown(
-                    f"""
-                    <div style='display:flex; justify-content:center; align-items:center;'>
-                        <div style='font-size:18px; font-weight:bold; margin-bottom:8px; text-align:center;'>
-                            {clean_lbl}
-                        </div>
-                    </div>
-                    """,
-                    unsafe_allow_html=True
-                )
-
+                st.markdown(f"**{clean_lbl}**")
                 if img_path:
-                    # Gambar center + kasih jarak bawah
-                    st.markdown(
-                        f"""
-                        <div style='display:flex; justify-content:center; margin-bottom:15px;'>
-                            <img src="data:image/png;base64,{base64.b64encode(open(img_path, "rb").read()).decode()}" width="200">
-                        </div>
-                        """,
-                        unsafe_allow_html=True
-                    )
+                    st.image(img_path, width=200)
                 else:
-                    st.markdown(
-                        f"<div style='padding:15px; background:#333; border-radius:8px; text-align:center; margin-bottom:15px;'>❌ (Gambar tidak ditemukan)</div>",
-                        unsafe_allow_html=True
-                    )
-
-                # Deskripsi justify biar rapi
-                with st.expander("Deskripsi Tanaman"):
-                    st.markdown(f"<div style='text-align:justify; line-height:1.6;'>{desc}</div>", unsafe_allow_html=True)
-
+                    st.warning("Gambar tidak ditemukan")
+                with st.expander("Deskripsi"):
+                    st.write(desc)
 
 elif selected == "Deteksi Tanaman":
-    st.title(" Deteksi Penyakit Daun Tomat")
-    uploaded_file = st.file_uploader("📤 Upload Gambar Daun Tomat", type=["jpg", "jpeg", "png"])
+    st.title("Deteksi Penyakit Daun Tomat")
+    uploaded_file = st.file_uploader("📤 Upload Gambar Daun Tomat", type=["jpg","jpeg","png"])
     if uploaded_file:
         img = Image.open(uploaded_file).convert("RGB")
-        st.image(img, caption="📷 Gambar yang diupload", use_container_width=True)
+        st.image(img, caption="Gambar yang diupload", use_container_width=True)
         if st.button("Jalankan Prediksi"):
             preds, label = predict_image(img)
             if preds is not None:
                 st.success(f"**Hasil Prediksi: {clean_label(label)}**")
                 st.bar_chart(preds)
+            else:
+                st.error("Model belum siap atau terjadi kesalahan saat prediksi.")
