@@ -124,41 +124,21 @@ def resolve_image_path(p: str) -> Path | None:
             return cand
     return None
 
-# ================= PREDICT FUNCTION =================
-def preprocess_image(img: Image.Image, target_size=(224, 224)):
-    """
-    Preprocess gambar agar sesuai input DenseNet121:
-    - Resize ke target_size
-    - Convert ke array float32
-    - Expand dims (batch dim)
-    - Preprocess sesuai DenseNet
-    """
-    img = img.resize(target_size)  
-    x = np.array(img, dtype=np.float32)  
-    x = np.expand_dims(x, axis=0)  # (1, h, w, c)
-    x = preprocess_input(x)  
-    return x
+# ================= PREPROCESS IMAGE =================
+def preprocess_image(uploaded_file):
+    img = Image.open(uploaded_file).convert("RGB")
+    img = img.resize((256, 256))
+    img_array = np.array(img) / 255.0  # normalisasi
+    img_array = np.expand_dims(img_array, axis=0)  # (1, 256, 256, 3)
+    return img_array
 
-
-def predict_image(img: Image.Image, model, class_labels=None):
-    """
-    Prediksi gambar pakai model CNN:
-    - Input: 1 gambar
-    - Output: (probabilities array, predicted_label)
-    """
-    if model is None:
-        return None, None
-    
-    x = preprocess_image(img)
-    preds = model.predict(x, verbose=0)  # (1, num_classes)
-    preds = preds[0]  # ambil hasil batch pertama → (num_classes,)
-
-    # Handle labels
-    labels = class_labels if class_labels and len(class_labels) == len(preds) \
-             else [f"Class {i}" for i in range(len(preds))]
-
-    top_idx = int(np.argmax(preds))
-    return preds, labels[top_idx]
+# ================= PREDICT =================
+def predict_image(model, img_array, labels):
+    preds = model.predict(img_array)
+    class_idx = np.argmax(preds, axis=1)[0]
+    confidence = float(np.max(preds))
+    label = labels[class_idx] if labels else f"Class {class_idx}"
+    return label, confidence
     
 # ======================= NAVBAR ============================
 with st.container():
@@ -212,16 +192,13 @@ if selected == "Beranda":
 
 elif selected == "Deteksi Tanaman":
     st.title("Deteksi Penyakit Daun Tomat")
-    uploaded_file = st.file_uploader("📤 Upload Gambar Daun Tomat", type=["jpg","jpeg","png"])
-    if uploaded_file:
-        img = Image.open(uploaded_file).convert("RGB")
-        st.image(img, caption="Gambar yang diupload", use_container_width=True)
-        if st.button("Jalankan Prediksi"):
-            preds, label = predict_image(img, model, class_labels)
-            if preds is not None:
-                st.success(f"**Hasil Prediksi: {clean_label(label)}**")
-                st.bar_chart(
-                    pd.DataFrame([preds], columns=[clean_label(lbl) for lbl in class_labels])
-                )
+    uploaded_file = st.file_uploader("Upload Gambar", type=["jpg","jpeg","png"])
+    if uploaded_file is not None and model is not None:
+        img_array = preprocess_image(uploaded_file)
+        label, confidence = predict_image(model, img_array, class_labels)
+        st.image(uploaded_file, caption="Gambar yang diupload", use_column_width=True)
+        st.success(f"Prediksi: {label} ({confidence:.2f})")
+        st.bar_chart(
+            pd.DataFrame([preds], columns=[clean_label(lbl) for lbl in class_labels]))
             else:
                 st.error("Model belum siap atau terjadi kesalahan saat prediksi.")
