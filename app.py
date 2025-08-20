@@ -193,12 +193,17 @@ if selected == "Beranda":
 elif selected == "Deteksi Tanaman":
     st.title("Deteksi Penyakit Daun Tomat")
     uploaded_file = st.file_uploader("Upload Gambar", type=["jpg","jpeg","png"])
+
     if uploaded_file is not None and model is not None:
         img_array = preprocess_image(uploaded_file)
-        label, confidence = predict_image(model, img_array, class_labels)
+        label, confidence, preds = predict_image(model, img_array, class_labels)
+
         st.image(uploaded_file, caption="Gambar yang diupload", use_column_width=True)
         st.success(f"Prediksi: {label} ({confidence:.2f})")
+
         st.bar_chart(
-            pd.DataFrame([preds], columns=[clean_label(lbl) for lbl in class_labels]))
-            else:
-                st.error("Model belum siap atau terjadi kesalahan saat prediksi.")
+            pd.DataFrame([preds], columns=[clean_label(lbl) for lbl in class_labels])
+        )
+
+    else:
+        st.error("Model belum siap atau terjadi kesalahan saat prediksi.")
