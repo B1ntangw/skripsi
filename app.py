@@ -5,7 +5,6 @@ import json
 from pathlib import Path
 import tensorflow as tf
 from streamlit_option_menu import option_menu
-from tensorflow import keras
 import base64
 import pandas as pd
 from typing import Optional, Tuple, List
@@ -45,25 +44,40 @@ def _infer_input_size_from_model(m: tf.keras.Model) -> Tuple[int, int]:
 # ====================== LOAD MODEL =========================
 @st.cache_resource(show_spinner=True)
 def load_model() -> Optional[tf.keras.Model]:
-    """Load model Keras. compile=False untuk hindari ketidakcocokan optimizer/loss."""
+    """Load model Keras (.keras atau .h5).
+       Jika .h5 gagal → coba konversi ke .keras otomatis.
+    """
     try:
         # Coba load apa adanya
-        model = tf.keras.models.load_model("models/model_tomat.h5", compile=False)
+        model = tf.keras.models.load_model(MODEL_PATH, compile=False, safe_mode=False)
         return model
     except Exception as e1:
-        # Jika gagal dan ekstensi .h5, coba opsi penyelamatan: SavedModel folder (tanpa ekstensi)
-        st.warning(f"Gagal memuat {MODEL_PATH.name} dengan pesan: {e1}. Mencoba format alternatif…")
+        st.warning(f"Gagal memuat {MODEL_PATH.name}: {e1}")
+
+        # Kalau ekstensi .h5 → coba konversi
+        if MODEL_PATH.suffix == ".h5":
+            try:
+                st.info("Mencoba konversi .h5 → .keras ...")
+                temp_model = tf.keras.models.load_model(MODEL_PATH, compile=False, safe_mode=False)
+                converted_path = MODEL_PATH.with_suffix(".keras")
+                temp_model.save(converted_path, save_format="keras")
+                model = tf.keras.models.load_model(converted_path, compile=False, safe_mode=False)
+                st.success("Model berhasil dikonversi dan dimuat ✅")
+                return model
+            except Exception as e2:
+                st.error(f"Konversi gagal: {e2}")
+
+        # Jika gagal dan ada folder SavedModel
         try:
             alt_path = MODEL_PATH.with_suffix("")
             if alt_path.exists():
-                model = tf.keras.models.load_model(str(alt_path), compile=False)
+                model = tf.keras.models.load_model(str(alt_path), compile=False, safe_mode=False)
                 return model
-        except Exception as e2:
-            st.error(f"Gagal memuat model (format alternatif): {e2}")
+        except Exception as e3:
+            st.error(f"Gagal memuat model (format alternatif): {e3}")
+
     return None
-
-model = load_model()
-
+    
 # Tentukan IMG_SIZE dari model jika memungkinkan
 IMG_SIZE: Tuple[int, int] = _infer_input_size_from_model(model) if model is not None else DEFAULT_IMG_SIZE
 
