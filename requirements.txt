@@ -1,4 +1,14 @@
+<<<<<<< HEAD
 streamlit==1.32.0
 tensorflow==2.12.0
 numpy==1.24.3
 pillow==10.0.1
+=======
+streamlit==1.36.0
+tensorflow==2.19.0
+numpy==1.26.4
+pillow==10.2.0
+pandas==2.2.2
+matplotlib==3.9.0
+streamlit-option-menu==0.3.12
+>>>>>>> 2e4a2763af99f92a9bf259d63558cbff5aeef162
