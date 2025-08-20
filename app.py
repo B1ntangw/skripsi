@@ -19,7 +19,7 @@ st.set_page_config(
 MODEL_PATH = Path("models/model_tomat.h5")  # bisa .h5 atau .keras
 LABEL_PATH = Path("models/class_labels.json")
 # fallback jika tidak bisa baca dari model
-DEFAULT_IMG_SIZE: Tuple[int, int] = (256, 256)
+IMG_SIZE: Tuple[int, int] = (256, 256)
 
 # ====================== UTILITIES =========================
 def _infer_input_size_from_model(m: tf.keras.Model) -> Tuple[int, int]:
@@ -28,7 +28,7 @@ def _infer_input_size_from_model(m: tf.keras.Model) -> Tuple[int, int]:
         shape = getattr(m, "input_shape", None)
         # Contoh shape: (None, 256, 256, 3)
         if shape is None:
-            return DEFAULT_IMG_SIZE
+            return IMG_SIZE
         # Beberapa model punya list of shapes (multi-input)
         if isinstance(shape, (list, tuple)) and isinstance(shape[0], (list, tuple)):
             # ambil input pertama
@@ -39,7 +39,7 @@ def _infer_input_size_from_model(m: tf.keras.Model) -> Tuple[int, int]:
                 return (h, w)
     except Exception:
         pass
-    return DEFAULT_IMG_SIZE
+    return IMG_SIZE
 
 # ====================== LOAD MODEL =========================
 @st.cache_resource(show_spinner=True)
@@ -79,7 +79,7 @@ def load_model() -> Optional[tf.keras.Model]:
     return None
     
 # Tentukan IMG_SIZE dari model jika memungkinkan
-IMG_SIZE: Tuple[int, int] = _infer_input_size_from_model(model) if model is not None else DEFAULT_IMG_SIZE
+IMG_SIZE: Tuple[int, int] = _infer_input_size_from_model(model) if model is not None else (256, 256)
 
 # ===================== LOAD LABELS =========================
 def load_labels() -> List[str]:
