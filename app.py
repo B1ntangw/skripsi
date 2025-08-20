@@ -7,29 +7,21 @@ from pathlib import Path
 import tensorflow as tf
 from streamlit_option_menu import option_menu
 import base64
-from tensorflow.keras.applications.densenet import preprocess_input 
-from tensorflow.keras.preprocessing import image
 
-# ================= CONFIG =================
+# ======================== CONFIG ==========================
 st.set_page_config(
-    page_title="Tomato Leaf Disease Classifier",
+    page_title="🍅 Tomato Leaf Disease Classifier",
     page_icon="🍅",
     layout="wide"
 )
 
-# ================= PATH MODEL =================
-MODEL_FOLDER = Path("models")
-MODEL_FOLDER.mkdir(parents=True, exist_ok=True)
+MODEL_PATH = Path("models/model_tomat.keras")
+LABEL_PATH = Path("models/class_labels.json")
+IMG_SIZE = (256, 256)
 
-MODEL_PATH = MODEL_FOLDER / "model_tomat.keras"  # gunakan .keras
-LABEL_PATH = MODEL_FOLDER / "class_labels.json"
-
-# ================= LOAD MODEL =================
+# ====================== LOAD MODEL =========================
 @st.cache_resource(show_spinner=True)
 def load_model():
-    if not MODEL_PATH.exists():
-        st.error(f"Model tidak ditemukan di {MODEL_PATH}")
-        return None
     try:
         model = tf.keras.models.load_model(MODEL_PATH, compile=False)
         return model
@@ -39,25 +31,23 @@ def load_model():
 
 model = load_model()
 
-# ================= LOAD LABELS =================
+# ===================== LOAD LABELS =========================
 def load_labels():
     if LABEL_PATH.exists():
         with open(LABEL_PATH, "r") as f:
             data = json.load(f)
-        if isinstance(data, dict):
-            return data.get("classes", [])
-        elif isinstance(data, list):
-            return data
+        return data.get("classes", [])
     return []
 
 class_labels = load_labels()
 
-# ================== LABEL CLEANER =================
+# ================= LABEL CLEANER ===========================
 def clean_label(lbl: str) -> str:
-    lbl = lbl.replace("Tomato", "").replace("___", " ").replace("_", " ").strip()
+    lbl = lbl.replace("Tomato", "").replace("___", " ").strip()
+    lbl = lbl.replace("_", " ")
     return " ".join(part.capitalize() for part in lbl.split())
-    
-# ================= CLASS IMAGE & DESCRIPTION =================
+
+# ================== CLASS IMAGE MAPPING ====================
 CLASS_IMAGES = {
     "Bacterial Spot": "img/bacterial_spot.JPG",
     "Early Blight": "img/early_blight.JPG",
@@ -125,21 +115,21 @@ def resolve_image_path(p: str) -> Path | None:
             return cand
     return None
 
-# ================= PREPROCESS IMAGE =================
-def preprocess_image(uploaded_file):
-    img = Image.open(uploaded_file).convert("RGB")
-    img = img.resize((256, 256))
-    img_array = np.array(img) / 255.0  # normalisasi
-    img_array = np.expand_dims(img_array, axis=0)  # (1, 256, 256, 3)
-    return img_array
+# ================== PREDICT FUNCTION =======================
+def preprocess_image(image: Image.Image):
+    img = image.resize(IMG_SIZE)
+    img_array = np.array(img) / 255.0
+    if img_array.shape[-1] == 4:
+        img_array = img_array[..., :3]
+    return np.expand_dims(img_array, axis=0)
 
-# ================= PREDICT =================
-def predict_image(model, img_array, class_labels):
-    preds = model.predict(img_array)  # shape (1, 10)
-    idx = np.argmax(preds, axis=1)[0]
-    confidence = preds[0][idx]
-    return class_labels[idx], confidence, preds[0]
-    
+def predict_image(img: Image.Image):
+    if model is None:
+        return None, None
+    x = preprocess_image(img)
+    preds = model.predict(x, verbose=0)[0]
+    return preds, class_labels[np.argmax(preds)] if class_labels else str(np.argmax(preds))
+
 # ======================= NAVBAR ============================
 with st.container():
     selected = option_menu(
@@ -162,48 +152,74 @@ with st.container():
 
 st.markdown("""<style>.nav-link::before { display: none !important; }</style>""", unsafe_allow_html=True)
 
-# ================= MAIN PAGE =================
+# ====================== MAIN PAGE ==========================
 if selected == "Beranda":
-    st.title("🍅 Tomato Leaf Disease Classifier")
+    st.title(" Tomato Leaf Disease Classifier")
     st.markdown(
         """
         <div style="padding:20px; background-color:#2c2c2c; border-radius:10px; margin-bottom:20px; color:#f1f1f1;">
         <h3>Selamat Datang Di Website</h3>
-        <p>Aplikasi ini menggunakan model <b>CNN</b> untuk mendeteksi penyakit pada daun tomat.</p>
+        <p>Aplikasi ini menggunakan model <b>Convolutional Neural Network (CNN)</b> 
+        untuk mendeteksi penyakit pada daun tomat secara otomatis</p>
+        <p> Pada halaman ini terdapat 9 jenis penyakit tanaman tomat beserta deskripsi penyakitnya</p>
         </div>
-        """, unsafe_allow_html=True
+        """,
+        unsafe_allow_html=True,
     )
 
     if class_labels:
-        st.subheader("Daftar Kelas")
+        st.subheader(" Daftar Kelas")
+        st.markdown("<br>", unsafe_allow_html=True)
+
         cols = st.columns(3)
-        for idx, lbl in enumerate(class_labels):
-            clean_lbl = clean_label(lbl)
-            img_path = resolve_image_path(CLASS_IMAGES.get(clean_lbl, ""))
+        for idx, raw_lbl in enumerate(class_labels):
+            clean_lbl = clean_label(raw_lbl)
+            mapped = CLASS_IMAGES.get(clean_lbl)
+            img_path = resolve_image_path(mapped) if mapped else None
             desc = CLASS_DESCRIPTIONS.get(clean_lbl, "Deskripsi belum tersedia.")
+
             with cols[idx % 3]:
-                st.markdown(f"**{clean_lbl}**")
+                # Judul center
+                st.markdown(
+                    f"""
+                    <div style='display:flex; justify-content:center; align-items:center;'>
+                        <div style='font-size:18px; font-weight:bold; margin-bottom:8px; text-align:center;'>
+                            {clean_lbl}
+                        </div>
+                    </div>
+                    """,
+                    unsafe_allow_html=True
+                )
+
                 if img_path:
-                    st.image(img_path, width=200)
+                    # Gambar center + kasih jarak bawah
+                    st.markdown(
+                        f"""
+                        <div style='display:flex; justify-content:center; margin-bottom:15px;'>
+                            <img src="data:image/png;base64,{base64.b64encode(open(img_path, "rb").read()).decode()}" width="200">
+                        </div>
+                        """,
+                        unsafe_allow_html=True
+                    )
                 else:
-                    st.warning("Gambar tidak ditemukan")
-                with st.expander("Deskripsi"):
-                    st.write(desc)
+                    st.markdown(
+                        f"<div style='padding:15px; background:#333; border-radius:8px; text-align:center; margin-bottom:15px;'>❌ (Gambar tidak ditemukan)</div>",
+                        unsafe_allow_html=True
+                    )
+
+                # Deskripsi justify biar rapi
+                with st.expander("Deskripsi Tanaman"):
+                    st.markdown(f"<div style='text-align:justify; line-height:1.6;'>{desc}</div>", unsafe_allow_html=True)
+
 
 elif selected == "Deteksi Tanaman":
-    st.title("Deteksi Penyakit Daun Tomat")
-    uploaded_file = st.file_uploader("Upload Gambar", type=["jpg","jpeg","png"])
-
-    if uploaded_file is not None and model is not None:
-        img_array = preprocess_image(uploaded_file)
-        label, confidence, preds = predict_image(model, img_array, class_labels)
-
-        st.image(uploaded_file, caption="Gambar yang diupload", use_column_width=True)
-        st.success(f"Prediksi: {label} ({confidence:.2f})")
-
-        st.bar_chart(
-            pd.DataFrame([preds], columns=[clean_label(lbl) for lbl in class_labels])
-        )
-
-    else:
-        st.error("Model belum siap atau terjadi kesalahan saat prediksi.")
+    st.title(" Deteksi Penyakit Daun Tomat")
+    uploaded_file = st.file_uploader("📤 Upload Gambar Daun Tomat", type=["jpg", "jpeg", "png"])
+    if uploaded_file:
+        img = Image.open(uploaded_file).convert("RGB")
+        st.image(img, caption="📷 Gambar yang diupload", use_container_width=True)
+        if st.button("Jalankan Prediksi"):
+            preds, label = predict_image(img)
+            if preds is not None:
+                st.success(f"**Hasil Prediksi: {clean_label(label)}**")
+                st.bar_chart(preds)
