@@ -220,6 +220,8 @@ elif selected == "Deteksi Tanaman":
             preds, label = predict_image(img, model, class_labels)
             if preds is not None:
                 st.success(f"**Hasil Prediksi: {clean_label(label)}**")
-                st.bar_chart(pd.DataFrame([preds], columns=[clean_label(lbl) for lbl in class_labels]))
+                st.bar_chart(
+                    pd.DataFrame([preds], columns=[clean_label(lbl) for lbl in class_labels])
+                )
             else:
                 st.error("Model belum siap atau terjadi kesalahan saat prediksi.")
