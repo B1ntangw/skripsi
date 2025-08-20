@@ -5,9 +5,9 @@ import json
 from pathlib import Path
 import tensorflow as tf
 from streamlit_option_menu import option_menu
-import base64
 import pandas as pd
 from typing import Optional, Tuple, List
+import gdown
 
 # ======================== CONFIG ==========================
 st.set_page_config(
@@ -16,13 +16,13 @@ st.set_page_config(
     layout="wide",
 )
 
-MODEL_PATH = Path("models/model3_tomat.h5")  # bisa .h5 atau .keras
+MODEL_PATH = Path("models/model3_tomat.h5")
 LABEL_PATH = Path("models/class_labels.json")
 IMG_SIZE: Tuple[int, int] = (256, 256)  # fallback
+DRIVE_URL = "https://drive.google.com/uc?id=1-EHYnQ_jJQY64toVEDHlMFDAsknE5SWr"  # ganti FILE_ID sesuai file di Drive
 
 # ====================== UTILITIES =========================
 def _infer_input_size_from_model(m: Optional[tf.keras.Model]) -> Tuple[int, int]:
-    """Coba ambil ukuran input (height, width) dari model; jika gagal pakai default."""
     try:
         if m is None:
             return IMG_SIZE
@@ -58,26 +58,21 @@ def resolve_image_path(p: str) -> Optional[Path]:
 
 # ====================== LOAD MODEL =========================
 @st.cache_resource(show_spinner=True)
-def load_model() -> Optional[tf.keras.Model]:
+def load_model():
+    # Download model jika belum ada
+    if not MODEL_PATH.exists():
+        MODEL_PATH.parent.mkdir(parents=True, exist_ok=True)
+        st.info("Mengunduh model dari Google Drive...")
+        gdown.download(DRIVE_URL, str(MODEL_PATH), quiet=False)
+
+    # Load model
     try:
-        return tf.keras.models.load_model(MODEL_PATH, compile=False, safe_mode=False)
-    except Exception as e1:
-        st.warning(f"Gagal memuat {MODEL_PATH.name}: {e1}")
-        if MODEL_PATH.suffix == ".h5":
-            try:
-                temp_model = tf.keras.models.load_model(MODEL_PATH, compile=False, safe_mode=False)
-                converted_path = MODEL_PATH.with_suffix(".keras")
-                temp_model.save(converted_path, save_format="keras")
-                return tf.keras.models.load_model(converted_path, compile=False, safe_mode=False)
-            except Exception as e2:
-                st.error(f"Konversi gagal: {e2}")
-        alt_path = MODEL_PATH.with_suffix("")
-        if alt_path.exists():
-            try:
-                return tf.keras.models.load_model(str(alt_path), compile=False, safe_mode=False)
-            except Exception as e3:
-                st.error(f"Gagal memuat model (format alternatif): {e3}")
-    return None
+        model = tf.keras.models.load_model(MODEL_PATH, compile=False)
+        st.success("Model berhasil dimuat ✅")
+        return model
+    except Exception as e:
+        st.error(f"Gagal memuat model: {e}")
+        return None
 
 model = load_model()
 IMG_SIZE = _infer_input_size_from_model(model)
