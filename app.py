@@ -16,7 +16,7 @@ st.set_page_config(
     layout="wide",
 )
 
-MODEL_PATH = Path("models/model_tomat.h5")  # bisa .h5 atau .keras
+MODEL_PATH = Path("models/model3_tomat.h5")  # bisa .h5 atau .keras
 LABEL_PATH = Path("models/class_labels.json")
 IMG_SIZE: Tuple[int, int] = (256, 256)  # fallback
 
