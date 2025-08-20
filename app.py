@@ -217,7 +217,7 @@ elif selected == "Deteksi Tanaman":
         img = Image.open(uploaded_file).convert("RGB")
         st.image(img, caption="Gambar yang diupload", use_container_width=True)
         if st.button("Jalankan Prediksi"):
-            preds, label = predict_image(img)
+            preds, label = predict_image(img, model, class_labels)
             if preds is not None:
                 st.success(f"**Hasil Prediksi: {clean_label(label)}**")
                 st.bar_chart(pd.DataFrame([preds], columns=[clean_label(lbl) for lbl in class_labels]))
