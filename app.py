@@ -7,7 +7,8 @@ from pathlib import Path
 import tensorflow as tf
 from streamlit_option_menu import option_menu
 import base64
-from tensorflow.keras.applications.densenet import preprocess_input  # pip install gdown
+from tensorflow.keras.applications.densenet import preprocess_input 
+from tensorflow.keras.preprocessing import image
 
 # ================= CONFIG =================
 st.set_page_config(
@@ -133,12 +134,11 @@ def preprocess_image(uploaded_file):
     return img_array
 
 # ================= PREDICT =================
-def predict_image(model, img_array, labels):
-    preds = model.predict(img_array)
-    class_idx = np.argmax(preds, axis=1)[0]
-    confidence = float(np.max(preds))
-    label = labels[class_idx] if labels else f"Class {class_idx}"
-    return label, confidence
+def predict_image(model, img_array, class_labels):
+    preds = model.predict(img_array)  # shape (1, 10)
+    idx = np.argmax(preds, axis=1)[0]
+    confidence = preds[0][idx]
+    return class_labels[idx], confidence, preds[0]
     
 # ======================= NAVBAR ============================
 with st.container():
