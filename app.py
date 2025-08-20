@@ -5,6 +5,7 @@ import json
 from pathlib import Path
 import tensorflow as tf
 from streamlit_option_menu import option_menu
+from tensorflow import keras
 import base64
 import pandas as pd
 from typing import Optional, Tuple, List
@@ -47,7 +48,7 @@ def load_model() -> Optional[tf.keras.Model]:
     """Load model Keras. compile=False untuk hindari ketidakcocokan optimizer/loss."""
     try:
         # Coba load apa adanya
-        model = tf.keras.models.load_model(MODEL_PATH, compile=False)
+        model = tf.keras.models.load_model("models/model_tomat.h5", compile=False)
         return model
     except Exception as e1:
         # Jika gagal dan ekstensi .h5, coba opsi penyelamatan: SavedModel folder (tanpa ekstensi)
