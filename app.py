@@ -17,32 +17,20 @@ st.set_page_config(
 
 # ================= PATH MODEL =================
 MODEL_FOLDER = Path("models")
-MODEL_FOLDER.mkdir(parents=True, exist_ok=True)  # pastikan folder ada
-MODEL_H5 = MODEL_FOLDER / "model_tomat.h5"
-MODEL_SM = MODEL_FOLDER / "model_tomat.keras"
+MODEL_FOLDER.mkdir(parents=True, exist_ok=True)
+
+MODEL_PATH = MODEL_FOLDER / "model_tomat.keras"  # gunakan .keras
 LABEL_PATH = MODEL_FOLDER / "class_labels.json"
-
-# ================= DOWNLOAD MODEL DARI DRIVE =================
-# Ganti link Drive ke format direct download
-DRIVE_LINK = "https://drive.google.com/uc?id=1-EHYnQ_jJQY64toVEDHlMFDAsknE5SWr"
-
-if not MODEL_H5.exists() and not MODEL_SM.exists():
-    with st.spinner("Mengunduh model dari Google Drive..."):
-        gdown.download(DRIVE_LINK, str(MODEL_H5), quiet=False)
 
 # ================= LOAD MODEL =================
 @st.cache_resource(show_spinner=True)
 def load_model():
+    if not MODEL_PATH.exists():
+        st.error(f"Model tidak ditemukan di {MODEL_PATH}")
+        return None
     try:
-        if MODEL_SM.exists():
-            return tf.keras.models.load_model(MODEL_SM)
-        elif MODEL_H5.exists():
-            model = tf.keras.models.load_model(MODEL_H5, compile=False)
-            model.save(MODEL_SM)  # simpan ke SavedModel untuk menghindari dtype error
-            return model
-        else:
-            st.error("Model tidak ditemukan!")
-            return None
+        model = tf.keras.models.load_model(MODEL_PATH, compile=False)
+        return model
     except Exception as e:
         st.error(f"Gagal memuat model: {e}")
         return None
@@ -62,11 +50,11 @@ def load_labels():
 
 class_labels = load_labels()
 
-# ================= LABEL CLEANER =================
+# ================== LABEL CLEANER =================
 def clean_label(lbl: str) -> str:
     lbl = lbl.replace("Tomato", "").replace("___", " ").replace("_", " ").strip()
     return " ".join(part.capitalize() for part in lbl.split())
-
+    
 # ================= CLASS IMAGE & DESCRIPTION =================
 CLASS_IMAGES = {
     "Bacterial Spot": "img/bacterial_spot.JPG",
@@ -135,23 +123,12 @@ def resolve_image_path(p: str) -> Path | None:
             return cand
     return None
 
-def resolve_image_path(p: str) -> Path | None:
-    base = Path(p)
-    if base.exists():
-        return base
-    exts = [".JPG", ".jpg", ".jpeg", ".png", ".PNG"]
-    stem = base.with_suffix("")
-    for ext in exts:
-        cand = stem.with_suffix(ext)
-        if cand.exists():
-            return cand
-    return None
-
 # ================= PREDICT FUNCTION =================
-IMG_SIZE = (256, 256)
+IMG_SIZE = (256, 256)  # fallback
+
 def preprocess_image(image: Image.Image):
     img = image.resize(IMG_SIZE)
-    img_array = np.array(img, dtype=np.float32)/255.0
+    img_array = np.array(img)/255.0
     if img_array.ndim == 2:
         img_array = np.stack([img_array]*3, axis=-1)
     if img_array.shape[-1] == 4:
@@ -165,7 +142,9 @@ def predict_image(img: Image.Image):
     preds = np.squeeze(model.predict(x, verbose=0))
     if preds.ndim == 0:
         preds = np.array([preds])
-    labels = class_labels if class_labels and len(class_labels)==preds.shape[-1] else [f"Class {i}" for i in range(len(preds))]
+    if len(preds) == 0:
+        return None, None
+    labels = class_labels if class_labels and len(class_labels) == len(preds) else [f"Class {i}" for i in range(len(preds))]
     top_idx = int(np.argmax(preds))
     return preds, labels[top_idx]
     
@@ -229,6 +208,6 @@ elif selected == "Deteksi Tanaman":
             preds, label = predict_image(img)
             if preds is not None:
                 st.success(f"**Hasil Prediksi: {clean_label(label)}**")
-                st.bar_chart(preds)
+                st.bar_chart(pd.DataFrame([preds], columns=[clean_label(lbl) for lbl in class_labels]))
             else:
                 st.error("Model belum siap atau terjadi kesalahan saat prediksi.")
