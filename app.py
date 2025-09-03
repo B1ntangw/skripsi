@@ -15,7 +15,7 @@ st.set_page_config(
     layout="wide"
 )
 
-MODEL_PATH = Path("models/baru43_tomato.h5")
+MODEL_PATH = Path("models/model43_tomat.keras")
 LABEL_PATH = Path("models/class_labels.json")
 IMG_SIZE = (256, 256)
 
