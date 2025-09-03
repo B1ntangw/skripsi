@@ -213,13 +213,28 @@ if selected == "Beranda":
 
 
 elif selected == "Deteksi Tanaman":
-    st.title(" Deteksi Penyakit Daun Tomat")
-    uploaded_file = st.file_uploader("📤 Upload Gambar Daun Tomat", type=["jpg", "jpeg", "png"])
-    if uploaded_file:
-        img = Image.open(uploaded_file).convert("RGB")
-        st.image(img, caption="📷 Gambar yang diupload", use_container_width=True)
-        if st.button("Jalankan Prediksi"):
-            preds, label = predict_image(img)
-            if preds is not None:
-                st.success(f"**Hasil Prediksi: {clean_label(label)}**")
-                st.bar_chart(preds)
+    st.title("📸 Deteksi Penyakit Daun Tomat")
+
+    # Pilih sumber input
+    option = st.radio("Pilih sumber gambar:", ["Upload Gambar", "Gunakan Kamera"])
+
+    img = None
+
+    if option == "Upload Gambar":
+        uploaded_file = st.file_uploader("📤 Upload Gambar Daun Tomat", type=["jpg", "jpeg", "png"])
+        if uploaded_file:
+            img = Image.open(uploaded_file).convert("RGB")
+            st.image(img, caption="📷 Gambar yang diupload", use_container_width=True)
+
+    elif option == "Gunakan Kamera":
+        camera_file = st.camera_input("Ambil foto dengan kamera")
+        if camera_file:
+            img = Image.open(camera_file).convert("RGB")
+            st.image(img, caption="📷 Foto dari kamera", use_container_width=True)
+
+    # Prediksi kalau ada gambar
+    if img is not None and st.button("🔍 Jalankan Prediksi"):
+        preds, label = predict_image(img)
+        if preds is not None:
+            st.success(f"**Hasil Prediksi: {clean_label(label)}**")
+            st.bar_chart(preds)
