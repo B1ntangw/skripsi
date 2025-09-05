@@ -1,7 +1,6 @@
-tensorflow==2.19.0
-gdown
 streamlit
-streamlit-option-menu
-Pillow
+tensorflow==2.19.0
+pillow
 numpy
 pandas
+streamlit-option-menu
