@@ -118,17 +118,31 @@ def resolve_image_path(p: str) -> Path | None:
 
 # ================== PREDICT FUNCTION =======================
 def preprocess_image(image: Image.Image):
-    img = image.resize(IMG_SIZE)
+    # Resize dan pastikan RGB
+    img = image.resize(IMG_SIZE).convert("RGB")
     img_array = np.array(img) / 255.0
-    if img_array.shape[-1] == 4:  # kalau ada alpha channel
+
+    # Pastikan shape (256, 256, 3)
+    if img_array.ndim == 2:  # grayscale → ubah jadi 3 channel
+        img_array = np.stack([img_array] * 3, axis=-1)
+    elif img_array.shape[-1] == 4:  # RGBA → buang alpha
         img_array = img_array[..., :3]
-    return np.expand_dims(img_array, axis=0)  # (1, 256, 256, 3)
+
+    # Expand ke batch (1, 256, 256, 3)
+    img_array = np.expand_dims(img_array, axis=0).astype(np.float32)
+
+    return img_array
+
 
 def predict_image(img: Image.Image):
     if model is None:
         return None, None
     x = preprocess_image(img)
-    preds = model.predict(x, verbose=0)[0]  # (10,)
+
+    # Debug: cek shape input
+    st.write("🔎 Shape input ke model:", x.shape)
+
+    preds = model.predict(x, verbose=0)[0]  # hasil shape (10,)
     if class_labels:
         label = class_labels[np.argmax(preds)]
     else:
