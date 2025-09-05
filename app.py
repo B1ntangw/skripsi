@@ -1,5 +1,6 @@
 import streamlit as st
 import numpy as np
+import pandas as pd
 from PIL import Image
 import json
 from pathlib import Path
@@ -14,7 +15,7 @@ st.set_page_config(
     layout="wide"
 )
 
-MODEL_PATH = Path("models/best_model.keras")   # gunakan file .keras terbaru
+MODEL_PATH = Path("models/best_model.keras")
 LABEL_PATH = Path("models/class_labels.json")
 IMG_SIZE = (256, 256)
 
@@ -22,7 +23,6 @@ IMG_SIZE = (256, 256)
 @st.cache_resource(show_spinner=True)
 def load_model():
     try:
-        # load tanpa compile → inference-only
         model = tf.keras.models.load_model(MODEL_PATH, compile=False)
         return model
     except Exception as e:
@@ -119,20 +119,16 @@ def resolve_image_path(p: str) -> Path | None:
 def preprocess_image(image: Image.Image):
     img = image.resize(IMG_SIZE)
     img_array = np.array(img) / 255.0
-    if img_array.shape[-1] == 4:  # kalau ada alpha channel
+    if img_array.shape[-1] == 4:
         img_array = img_array[..., :3]
-    return np.expand_dims(img_array, axis=0)  # (1, 256, 256, 3)
+    return np.expand_dims(img_array, axis=0)
 
 def predict_image(img: Image.Image):
     if model is None:
         return None, None
     x = preprocess_image(img)
-    preds = model.predict(x, verbose=0)[0]  # (10,)
-    if class_labels:
-        label = class_labels[np.argmax(preds)]
-    else:
-        label = str(np.argmax(preds))
-    return preds, label
+    preds = model.predict(x, verbose=0)[0]
+    return preds, class_labels[np.argmax(preds)] if class_labels else str(np.argmax(preds))
 
 # ======================= NAVBAR ============================
 with st.container():
@@ -158,23 +154,70 @@ st.markdown("""<style>.nav-link::before { display: none !important; }</style>"""
 
 # ====================== MAIN PAGE ==========================
 if selected == "Beranda":
-    st.title("🍅 Tomato Leaf Disease Classifier")
+    st.title(" Tomato Leaf Disease Classifier")
     st.markdown(
         """
         <div style="padding:20px; background-color:#2c2c2c; border-radius:10px; margin-bottom:20px; color:#f1f1f1;">
-        <h3>Selamat Datang 👋</h3>
+        <h3>Selamat Datang Di Website</h3>
         <p>Aplikasi ini menggunakan model <b>Convolutional Neural Network (CNN)</b> 
-        untuk mendeteksi penyakit pada daun tomat secara otomatis.</p>
-        <p>Pada halaman ini terdapat 9 jenis penyakit tanaman tomat beserta deskripsi penyakitnya.</p>
+        untuk mendeteksi penyakit pada daun tomat secara otomatis</p>
+        <p> Pada halaman ini terdapat 9 jenis penyakit tanaman tomat beserta deskripsi penyakitnya</p>
         </div>
         """,
         unsafe_allow_html=True,
     )
 
+    if class_labels:
+        st.subheader(" Daftar Kelas")
+        st.markdown("<br>", unsafe_allow_html=True)
+
+        cols = st.columns(3)
+        for idx, raw_lbl in enumerate(class_labels):
+            clean_lbl = clean_label(raw_lbl)
+            mapped = CLASS_IMAGES.get(clean_lbl)
+            img_path = resolve_image_path(mapped) if mapped else None
+            desc = CLASS_DESCRIPTIONS.get(clean_lbl, "Deskripsi belum tersedia.")
+
+            with cols[idx % 3]:
+                # Judul center
+                st.markdown(
+                    f"""
+                    <div style='display:flex; justify-content:center; align-items:center;'>
+                        <div style='font-size:18px; font-weight:bold; margin-bottom:8px; text-align:center;'>
+                            {clean_lbl}
+                        </div>
+                    </div>
+                    """,
+                    unsafe_allow_html=True
+                )
+
+                if img_path:
+                    # Gambar center + kasih jarak bawah
+                    st.markdown(
+                        f"""
+                        <div style='display:flex; justify-content:center; margin-bottom:15px;'>
+                            <img src="data:image/png;base64,{base64.b64encode(open(img_path, "rb").read()).decode()}" width="200">
+                        </div>
+                        """,
+                        unsafe_allow_html=True
+                    )
+                else:
+                    st.markdown(
+                        f"<div style='padding:15px; background:#333; border-radius:8px; text-align:center; margin-bottom:15px;'>❌ (Gambar tidak ditemukan)</div>",
+                        unsafe_allow_html=True
+                    )
+
+                # Deskripsi justify biar rapi
+                with st.expander("Deskripsi Tanaman"):
+                    st.markdown(f"<div style='text-align:justify; line-height:1.6;'>{desc}</div>", unsafe_allow_html=True)
+
+
 elif selected == "Deteksi Tanaman":
     st.title("📸 Deteksi Penyakit Daun Tomat")
 
+    # Pilih sumber input
     option = st.radio("Pilih sumber gambar:", ["Upload Gambar", "Gunakan Kamera"])
+
     img = None
 
     if option == "Upload Gambar":
@@ -189,6 +232,7 @@ elif selected == "Deteksi Tanaman":
             img = Image.open(camera_file).convert("RGB")
             st.image(img, caption="📷 Foto dari kamera", use_container_width=True)
 
+    # Prediksi kalau ada gambar
     if img is not None and st.button("🔍 Jalankan Prediksi"):
         preds, label = predict_image(img)
         if preds is not None:
