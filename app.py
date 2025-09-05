@@ -15,7 +15,7 @@ st.set_page_config(
     layout="wide"
 )
 
-MODEL_PATH = Path("models/model43_tomat.keras")
+MODEL_PATH = Path("models/best_model.keras")
 LABEL_PATH = Path("models/class_labels.json")
 IMG_SIZE = (256, 256)
 
