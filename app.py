@@ -10,7 +10,7 @@ import base64
 
 # ======================== CONFIG ==========================
 st.set_page_config(
-    page_title=" Tomato Leaf Disease Classifier",
+    page_title="Tomato Leaf Disease Classifier",
     page_icon="",
     layout="wide"
 )
@@ -243,7 +243,7 @@ elif selected == "Deteksi Tanaman":
         uploaded_file = st.file_uploader("Upload Gambar Daun Tomat", type=["jpg", "jpeg", "png"])
         if uploaded_file:
             img = Image.open(uploaded_file).convert("RGB")
-            st.image(img, caption="📷 Gambar yang diupload", use_container_width=True)
+            st.image(img, caption="Gambar yang diupload", use_container_width=True)
 
     elif option == "Gunakan Kamera":
         camera_file = st.camera_input("Ambil foto dengan kamera")
@@ -252,7 +252,7 @@ elif selected == "Deteksi Tanaman":
             st.image(img, caption="Foto dari kamera", use_container_width=True)
 
     # Prediksi kalau ada gambar
-    if img is not None and st.button("🔍 Jalankan Prediksi"):
+    if img is not None and st.button("Jalankan Prediksi"):
         preds, label = predict_image(img)
         if preds is not None:
             st.success(f"**Hasil Prediksi: {clean_label(label)}**")
