@@ -10,8 +10,8 @@ import base64
 
 # ======================== CONFIG ==========================
 st.set_page_config(
-    page_title="🍅 Tomato Leaf Disease Classifier",
-    page_icon="🍅",
+    page_title=" Tomato Leaf Disease Classifier",
+    page_icon="",
     layout="wide"
 )
 
@@ -140,7 +140,7 @@ def predict_image(img: Image.Image):
     x = preprocess_image(img)
 
     # Debug: cek shape input
-    st.write("🔎 Shape input ke model:", x.shape)
+    st.write(" Shape input ke model:", x.shape)
 
     preds = model.predict(x, verbose=0)[0]  # hasil shape (10,)
     if class_labels:
@@ -232,7 +232,7 @@ if selected == "Beranda":
 
 
 elif selected == "Deteksi Tanaman":
-    st.title("📸 Deteksi Penyakit Daun Tomat")
+    st.title("Deteksi Penyakit Daun Tomat")
 
     # Pilih sumber input
     option = st.radio("Pilih sumber gambar:", ["Upload Gambar", "Gunakan Kamera"])
@@ -240,7 +240,7 @@ elif selected == "Deteksi Tanaman":
     img = None
 
     if option == "Upload Gambar":
-        uploaded_file = st.file_uploader("📤 Upload Gambar Daun Tomat", type=["jpg", "jpeg", "png"])
+        uploaded_file = st.file_uploader("Upload Gambar Daun Tomat", type=["jpg", "jpeg", "png"])
         if uploaded_file:
             img = Image.open(uploaded_file).convert("RGB")
             st.image(img, caption="📷 Gambar yang diupload", use_container_width=True)
@@ -249,7 +249,7 @@ elif selected == "Deteksi Tanaman":
         camera_file = st.camera_input("Ambil foto dengan kamera")
         if camera_file:
             img = Image.open(camera_file).convert("RGB")
-            st.image(img, caption="📷 Foto dari kamera", use_container_width=True)
+            st.image(img, caption="Foto dari kamera", use_container_width=True)
 
     # Prediksi kalau ada gambar
     if img is not None and st.button("🔍 Jalankan Prediksi"):
